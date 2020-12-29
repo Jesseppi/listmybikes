@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ListMyBikes.Data;
 using ListMyBikes.Models;
+using ListMyBikes.DAL;
 
 namespace ListMyBikes.Controllers
 {
@@ -14,32 +15,34 @@ namespace ListMyBikes.Controllers
     [ApiController]
     public class BikeController : ControllerBase
     {
-        private readonly BikeContext _context;
+        private IBikeRepository bikeRespository;
 
-        public BikeController(BikeContext context)
+        public BikeController(BikeRepository repo)
         {
-            _context = context;
+            this.bikeRespository = repo;
         }
 
         // GET: api/Bike
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Bike>>> GetBikes()
         {
-            return await _context.Bikes.ToListAsync();
+            var bikesList = await bikeRespository.GetBikesAsync();
+            if (bikesList.Count() == 0) return NotFound();
+            return Ok(bikesList);
         }
 
         // GET: api/Bike/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Bike>> GetBike(long id)
         {
-            var bike = await _context.Bikes.FindAsync(id);
+            var bike = await bikeRespository.GetBikeByIdAsync(id);
 
             if (bike == null)
             {
                 return NotFound();
             }
 
-            return bike;
+            return Ok(bike);
         }
 
         // PUT: api/Bike/5
@@ -52,25 +55,18 @@ namespace ListMyBikes.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(bike).State = EntityState.Modified;
-
-            try
+            if (bikeRespository.BikeExists(id))
             {
-                await _context.SaveChangesAsync();
+                await bikeRespository.UpdateBikeAsync(bike);
+                await bikeRespository.SaveAsync();
+                return NoContent();
             }
-            catch (DbUpdateConcurrencyException)
+            else
             {
-                if (!BikeExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                await bikeRespository.InsertBikeAsync(bike);
+                await bikeRespository.SaveAsync();
+                return CreatedAtAction(nameof(GetBike), new { id = bike.Id }, bike);
             }
-
-            return NoContent();
         }
 
         // POST: api/Bike
@@ -78,9 +74,8 @@ namespace ListMyBikes.Controllers
         [HttpPost]
         public async Task<ActionResult<Bike>> PostBike(Bike bike)
         {
-            _context.Bikes.Add(bike);
-            await _context.SaveChangesAsync();
-
+            await bikeRespository.InsertBikeAsync(bike);
+            await bikeRespository.SaveAsync();
             return CreatedAtAction(nameof(GetBike), new { id = bike.Id }, bike);
         }
 
@@ -88,21 +83,15 @@ namespace ListMyBikes.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBike(long id)
         {
-            var bike = await _context.Bikes.FindAsync(id);
+            var bike = await bikeRespository.GetBikeByIdAsync(id);
             if (bike == null)
             {
                 return NotFound();
             }
 
-            _context.Bikes.Remove(bike);
-            await _context.SaveChangesAsync();
-
+            await bikeRespository.DeleteBikeAsync(id);
+            await bikeRespository.SaveAsync();
             return NoContent();
-        }
-
-        private bool BikeExists(long id)
-        {
-            return _context.Bikes.Any(e => e.Id == id);
         }
     }
 }

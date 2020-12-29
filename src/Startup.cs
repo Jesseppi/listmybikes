@@ -1,3 +1,4 @@
+using ListMyBikes.DAL;
 using ListMyBikes.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -30,6 +31,7 @@ namespace ListMyBikes
             });
 
             services.AddDbContext<BikeContext>(opt => opt.UseNpgsql("user ID=jessec;Password=;Host=localhost;Port=5432;Database=ListMyBikes"));
+            services.AddSingleton<IBikeRepository, BikeRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
