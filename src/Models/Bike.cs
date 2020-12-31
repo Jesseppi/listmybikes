@@ -1,10 +1,10 @@
+using ListMyBikes.DAL;
 using Microsoft.EntityFrameworkCore;
 
 namespace ListMyBikes.Models
 {
-    public interface IBike
+    public interface IBike : IEntity
     {
-        long Id { get; set; }
         string Name { get; set; }
         long FrameId { get; set; }
     }

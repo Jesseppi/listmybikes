@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using ListMyBikes.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace ListMyBikes.DAL
 {
-    public class GenericRespository<TEntity> where TEntity : class
+    public class GenericRespository<TEntity> where TEntity : class,IEntity
     {
         internal BikeContext context;
         internal DbSet<TEntity> dBSet;
@@ -18,7 +19,7 @@ namespace ListMyBikes.DAL
             this.dBSet = context.Set<TEntity>();
         }
 
-        public virtual IEnumerable<TEntity> Get(
+        public virtual async Task<IEnumerable<TEntity>> GetAsync(
             Expression<Func<TEntity, bool>> filter = null,
             Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> orderBy = null,
             string includeProperties = ""
@@ -38,24 +39,30 @@ namespace ListMyBikes.DAL
                 return orderBy(query).ToList();
             }
             else {
-                return query.ToList();
+                return await query.ToListAsync();
             }
         }
 
-        public virtual TEntity GetById(object id){
-            return dBSet.Find(id);
+        public virtual async  Task<TEntity> GetByIdAsync(object id){
+            return await dBSet.FindAsync(id);
         }
 
-        public virtual void Insert(TEntity entity){
-            dBSet.Add(entity);
+        public virtual async Task InsertAsync(TEntity entity){
+            await dBSet.AddAsync(entity);
         }
 
-        public virtual void Delete(object id){
-            var entity = dBSet.Find(id);
+        public virtual async Task DeleteAsync(object id){
+            var entity = await dBSet.FindAsync(id);
             dBSet.Remove(entity);
         }
 
-        public virtual void Delete(TEntity entity){
+        public virtual bool Exists(long id) =>
+            dBSet.Any<TEntity>(x => x.Id == id);
+
+        public virtual bool Exists(TEntity entity) =>
+            dBSet.Any<TEntity>(x => x.Id == entity.Id);
+
+        public virtual void DeleteAsync(TEntity entity){
             if(context.Entry(entity).State == EntityState.Detached){
                 dBSet.Attach(entity);
             }

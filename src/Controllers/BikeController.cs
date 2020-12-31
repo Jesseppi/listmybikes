@@ -15,18 +15,15 @@ namespace ListMyBikes.Controllers
     [ApiController]
     public class BikeController : ControllerBase
     {
-        private IBikeRepository bikeRespository;
+        private UnitOfWork unitOfWork = new UnitOfWork();
 
-        public BikeController(BikeRepository repo)
-        {
-            this.bikeRespository = repo;
-        }
+        public BikeController(){}
 
         // GET: api/Bike
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Bike>>> GetBikes()
         {
-            var bikesList = await bikeRespository.GetBikesAsync();
+            var bikesList = await unitOfWork.BikeRepository.GetAsync();
             if (bikesList.Count() == 0) return NotFound();
             return Ok(bikesList);
         }
@@ -35,7 +32,7 @@ namespace ListMyBikes.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Bike>> GetBike(long id)
         {
-            var bike = await bikeRespository.GetBikeByIdAsync(id);
+            var bike = await unitOfWork.BikeRepository.GetByIdAsync(id);
 
             if (bike == null)
             {
@@ -55,16 +52,16 @@ namespace ListMyBikes.Controllers
                 return BadRequest();
             }
 
-            if (bikeRespository.BikeExists(id))
+            if (unitOfWork.BikeRepository.Exists(id))
             {
-                await bikeRespository.UpdateBikeAsync(bike);
-                await bikeRespository.SaveAsync();
+                unitOfWork.BikeRepository.Update(bike);
+                unitOfWork.Save();
                 return NoContent();
             }
             else
             {
-                await bikeRespository.InsertBikeAsync(bike);
-                await bikeRespository.SaveAsync();
+                await unitOfWork.BikeRepository.InsertAsync(bike);
+                unitOfWork.Save();
                 return CreatedAtAction(nameof(GetBike), new { id = bike.Id }, bike);
             }
         }
@@ -74,8 +71,8 @@ namespace ListMyBikes.Controllers
         [HttpPost]
         public async Task<ActionResult<Bike>> PostBike(Bike bike)
         {
-            await bikeRespository.InsertBikeAsync(bike);
-            await bikeRespository.SaveAsync();
+            await unitOfWork.BikeRepository.InsertAsync(bike);
+            unitOfWork.Save();
             return CreatedAtAction(nameof(GetBike), new { id = bike.Id }, bike);
         }
 
@@ -83,14 +80,14 @@ namespace ListMyBikes.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBike(long id)
         {
-            var bike = await bikeRespository.GetBikeByIdAsync(id);
+            var bike = await unitOfWork.BikeRepository.GetByIdAsync(id);
             if (bike == null)
             {
                 return NotFound();
             }
 
-            await bikeRespository.DeleteBikeAsync(id);
-            await bikeRespository.SaveAsync();
+            await unitOfWork.BikeRepository.DeleteAsync(id);
+            unitOfWork.Save();
             return NoContent();
         }
     }
